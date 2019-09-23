@@ -1,0 +1,35 @@
+name: Ruby
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby_versions: [2.4.x, 2.5.x, 2.6.x]
+    services:
+      db:
+        image: postgres:11
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby ${{ matrix.ruby_version }}
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: "${{ matrix.ruby_version }}"
+    - name: Test with Rake
+      env:
+        PGHOST: 127.0.0.1
+        PGUSER: postgres
+      run: |
+        sudo apt-get -yqq install libpq-dev
+        createdb que-test
+        gem install bundler
+        bundle install --jobs 4 --retry 3
+        bundle exec rake test
